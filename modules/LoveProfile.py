@@ -6,13 +6,9 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from easy_pil import Editor, Canvas, Font, load_image_async
-from PIL import ImageFont
-
 from modules.Logger import *
 from modules.Database import Database
 from modules.Utils import Utils
-
 
 guild_id_cmd = Utils.get_guild_id()
 
@@ -24,46 +20,6 @@ WARNING_ACCENT = discord.Color.orange().value
 
 DEFAULT_IMAGE_URL = "https://cdn.discordapp.com/attachments/992883178362642453/1029462389130792970/-1.png"
 
-# Fonts
-font_46 = Font("assets/font.ttf", size=46)
-font_27 = Font("assets/font.ttf", size=27)
-font_40 = Font("assets/font.ttf", size=40)
-
-font_bighaustitul_50 = Font("assets/font_bighaustitul.ttf", size=50)
-
-# PIL Fonts для измерения текста
-pil_font_46 = ImageFont.truetype("assets/font.ttf", 46)
-pil_font_27 = ImageFont.truetype("assets/font.ttf", 27)
-pil_font_40 = ImageFont.truetype("assets/font.ttf", 40)
-
-TEXT_COLOR = "#bdbec1"
-
-# ========== НАСТРОЙКИ КООРДИНАТ ==========
-AVATAR_USER_X = 412
-AVATAR_USER_Y = 177
-AVATAR_PARTNER_X = 1304
-AVATAR_PARTNER_Y = 177
-AVATAR_SIZE = 225
-
-NICK_USER_CENTER_X = 522
-NICK_USER_CENTER_Y = 484
-NICK_PARTNER_CENTER_X = 1418
-NICK_PARTNER_CENTER_Y = 484
-
-TIME_CENTER_X = 985
-TIME_CENTER_Y = 470
-
-VOICE_X = 399
-VOICE_Y = 661
-
-BALANCE_X = 1587
-BALANCE_Y = 661
-
-DATE_CENTER_X = 1013
-DATE_CENTER_Y = 661
-DATE_WIDTH = 200
-# ========== КОНЕЦ НАСТРОЕК ==========
-
 
 async def maybe_await(value):
     if inspect.isawaitable(value):
@@ -71,18 +27,8 @@ async def maybe_await(value):
     return value
 
 
-def clamp_text(value, limit=3800):
-    value = "" if value is None else str(value)
-    return value if len(value) <= limit else value[: limit - 3] + "..."
-
-
-def get_text_width(text, font):
-    bbox = font.getbbox(text)
-    return bbox[2] - bbox[0]
-
-
 class V2Mixin:
-    def build_view(self, title, description=None, *, footer=None, rows=None, image_url=None):
+    def build_view(self, title, description=None, *, footer=None, rows=None, image_url=None, **kwargs):
         view = discord.ui.LayoutView(timeout=None)
         container = discord.ui.Container()
 
@@ -286,12 +232,8 @@ class LoveProfile(commands.Cog, V2Mixin):
 
         return f"{days_count}д.{hours_count}ч."
 
-    async def generate_lprofile(self, interaction: discord.Interaction, member):
-        canvas = Canvas((1942, 809))
-        background = Editor("assets/marry/themes/theme_default.png")
-        editor = Editor(canvas)
-        editor.paste(background.image, (0, 0))
-
+    async def get_profile_text(self, interaction: discord.Interaction, member):
+        """Генерация текстового профиля вместо изображения"""
         data = await maybe_await(self.db.get_info_marriege(member))
         if not data:
             return None
@@ -319,111 +261,63 @@ class LoveProfile(commands.Cog, V2Mixin):
         reg_days = (datetime.now() - reg_date).total_seconds() / 86400
         end = reg_date + timedelta(days=30)
 
-        a_user = await load_image_async(str(user.display_avatar.url))
-        a_user = Editor(a_user).resize((AVATAR_SIZE, AVATAR_SIZE)).circle_image()
-        background.paste(a_user, (AVATAR_USER_X, AVATAR_USER_Y))
-
-        a_partner = await load_image_async(str(partner.display_avatar.url))
-        a_partner = Editor(a_partner).resize((AVATAR_SIZE, AVATAR_SIZE)).circle_image()
-        background.paste(a_partner, (AVATAR_PARTNER_X, AVATAR_PARTNER_Y))
-
-        name_user = user.display_name
-        text_width_user = get_text_width(name_user, pil_font_46)
-        name_x_user = NICK_USER_CENTER_X - (text_width_user // 2)
-        background.text(
-            (name_x_user, NICK_USER_CENTER_Y),
-            name_user,
-            color=TEXT_COLOR,
-            font=font_46,
-            align="left",
-        )
-
-        name_partner = partner.display_name
-        text_width_partner = get_text_width(name_partner, pil_font_46)
-        name_x_partner = NICK_PARTNER_CENTER_X - (text_width_partner // 2)
-        background.text(
-            (name_x_partner, NICK_PARTNER_CENTER_Y),
-            name_partner,
-            color=TEXT_COLOR,
-            font=font_46,
-            align="left",
-        )
-
-        time_spent = self.format_time_spent(reg_days)
-        text_width_time = get_text_width(time_spent, pil_font_46)
-        time_x = TIME_CENTER_X - (text_width_time // 2)
-        background.text(
-            (time_x, TIME_CENTER_Y),
-            time_spent,
-            color=TEXT_COLOR,
-            font=font_46,
-            align="left",
-        )
-
         love_room_data = await maybe_await(self.db.get_data_loveRoom(member))
         voice_hours = love_room_data.get("total_hours", 0) if love_room_data else 0
-        voice_text = f"{voice_hours}ч."
-        background.text(
-            (VOICE_X, VOICE_Y),
-            voice_text,
-            color=TEXT_COLOR,
-            font=font_40,
-            align="left",
-        )
 
-        date_text = f"{end.day:02}.{end.month:02}.{end.year}"
-        text_width_date = get_text_width(date_text, pil_font_40)
-        date_x = DATE_CENTER_X + (DATE_WIDTH // 2) - (text_width_date // 2)
-        background.text(
-            (date_x, DATE_CENTER_Y),
-            date_text,
-            color=TEXT_COLOR,
-            font=font_40,
-            align="left",
-        )
-
+        time_spent = self.format_time_spent(reg_days)
         balance = str(data[3])
-        background.text(
-            (BALANCE_X, BALANCE_Y),
-            balance,
-            color=TEXT_COLOR,
-            font=font_40,
-            align="left",
-        )
 
-        return background
+        # Формируем текстовый профиль
+        profile_text = f"""## Любовный профиль
+### {user.display_name} ❤️ {partner.display_name}
 
-    async def make_profile_file(self, interaction: discord.Interaction, member):
-        lprofile = await self.generate_lprofile(interaction, member)
+**Участники:**
+• {user.mention} 
+• {partner.mention}
 
-        if not lprofile:
-            return None
+**Время вместе:** {time_spent}
+**Дата обновления:** {end.day:02}.{end.month:02}.{end.year}
 
-        return discord.File(fp=lprofile.image_bytes, filename="image.png")
+**Голосовых часов:** {voice_hours}ч.
+**Баланс пары:** {balance} {COIN}
+
+---
+
+*Для управления профилем используйте кнопки ниже*"""
+
+        return profile_text
 
     async def refresh_profile_message(self, root_interaction: discord.Interaction):
-        file = await self.make_profile_file(root_interaction, root_interaction.user)
+        """Обновление текстового профиля"""
+        profile_text = await self.get_profile_text(root_interaction, root_interaction.user)
 
-        if not file:
+        if not profile_text:
             return await self.edit_original(
                 root_interaction,
-                self.error_view("Ошибка", "Не удалось обновить любовный профиль."),
+                self.error_view("Ошибка", "Не удалось получить данные любовного профиля."),
                 attachments=[],
             )
 
         await self.edit_original(
             root_interaction,
-            await self.main_profile_view(root_interaction),
-            attachments=[file],
+            await self.main_profile_view(root_interaction, profile_text),
+            attachments=[],
         )
 
-    def profile_only_view(self, member, partner):
+    def profile_only_view(self, member, partner, profile_text):
         return self.build_view(
-            f"Любовный профиль — {member.display_name} — {partner.display_name}",
-            image_url="attachment://image.png",
+            profile_text,
+            image_url=None,
         )
 
-    async def main_profile_view(self, root_interaction: discord.Interaction):
+    async def main_profile_view(self, root_interaction: discord.Interaction, profile_text=None):
+        """Основной вид профиля с кнопками управления"""
+        if profile_text is None:
+            profile_text = await self.get_profile_text(root_interaction, root_interaction.user)
+            
+        if not profile_text:
+            return self.error_view("Ошибка", "Не удалось получить данные профиля.")
+
         async def add_balance(button_interaction: discord.Interaction):
             if button_interaction.user.id != root_interaction.user.id:
                 return await self.respond(
@@ -461,24 +355,9 @@ class LoveProfile(commands.Cog, V2Mixin):
 
             await self.handle_divorce(root_interaction, button_interaction)
 
-        data = await maybe_await(self.db.get_info_marriege(root_interaction.user))
-        
-        if data:
-            partner_1 = await self.resolve_user(int(data[1]))
-            partner_2 = await self.resolve_user(int(data[2]))
-            
-            if root_interaction.user.id == partner_1.id:
-                partner = partner_2
-            else:
-                partner = partner_1
-
-            title = f"Любовный профиль {root_interaction.user.display_name} — {partner.display_name}"
-        else:
-            title = f"Любовный профиль {root_interaction.user.display_name}"
-
         return self.build_view(
-            title,
-            image_url="attachment://image.png",
+            profile_text,
+            image_url=None,
             rows=[
                 [
                     self.button("Пополнить баланс", callback=add_balance, custom_id="love_balance_add"),
@@ -609,7 +488,7 @@ class LoveProfile(commands.Cog, V2Mixin):
             bitrates = [96000, 128000, 256000, 384000]
             bitrate = bitrates[self.guild.premium_tier]
 
-            channel_name = f"{partner_1.display_name} 💕 {partner_2.display_name}"
+            channel_name = f"{partner_1.display_name} ❤️ {partner_2.display_name}"
 
             overwrites = {
                 self.guild.default_role: discord.PermissionOverwrite(connect=False, view_channel=False),
@@ -627,7 +506,6 @@ class LoveProfile(commands.Cog, V2Mixin):
                 category=love_category,
             )
 
-            # Списание денег и обновление даты списания
             await maybe_await(self.db.deduct_balance_and_update_date(root_interaction.user.id, cost))
             await maybe_await(self.db.write_data_loveRoom(root_interaction.user, "bought", True))
             await maybe_await(self.db.write_data_loveRoom(partner_1, "id", channel.id))
@@ -724,7 +602,7 @@ class LoveProfile(commands.Cog, V2Mixin):
                 ],
                 [
                     self.button("Сбросить название", callback=reset_name, custom_id="love_room_reset_name"),
-                    self.button("Скрыть/Показать комнату", callback=toggle_hide, custom_id="love_room_toggle"),
+                    self.button("Скрыть/Показать", callback=toggle_hide, custom_id="love_room_toggle"),
                 ],
                 [
                     self.button("Удалить комнату", callback=delete_room, custom_id="love_room_delete"),
@@ -755,7 +633,7 @@ class LoveProfile(commands.Cog, V2Mixin):
                 ephemeral=True,
             )
 
-        default_name = f"{partner_1.display_name} 💕 {partner_2.display_name}"
+        default_name = f"{partner_1.display_name} ❤️ {partner_2.display_name}"
 
         await maybe_await(self.db.write_data_loveRoom(root_interaction.user, "name", 0))
 
@@ -873,7 +751,7 @@ class LoveProfile(commands.Cog, V2Mixin):
 
         delete_message = await button_interaction.followup.send(
             view=self.build_view(
-                "⚠ Подтверждение удаления",
+                "Подтверждение удаления",
                 "Вы уверены, что хотите **удалить** вашу любовную комнату?\n\n"
                 "**Это действие невозможно отменить.**",
                 image_url=DEFAULT_IMAGE_URL,
@@ -1005,9 +883,9 @@ class LoveProfile(commands.Cog, V2Mixin):
 
         await interaction.response.defer()
 
-        file = await self.make_profile_file(interaction, target)
+        profile_text = await self.get_profile_text(interaction, target)
 
-        if not file:
+        if not profile_text:
             return await interaction.followup.send(
                 view=self.error_view("Ошибка", "Не удалось сгенерировать профиль."),
                 ephemeral=True,
@@ -1024,13 +902,11 @@ class LoveProfile(commands.Cog, V2Mixin):
                 partner = partner_1
                 
             return await interaction.followup.send(
-                file=file,
-                view=self.profile_only_view(target, partner),
+                view=self.profile_only_view(target, partner, profile_text),
             )
 
         await interaction.followup.send(
-            file=file,
-            view=await self.main_profile_view(interaction),
+            view=await self.main_profile_view(interaction, profile_text),
         )
 
 
@@ -1195,7 +1071,7 @@ class ChangeLoveRoomNameModal(discord.ui.Modal):
         old_name = love_room_data.get("name")
 
         if old_name == 0 or old_name is None:
-            old_name = f"{partner_1.display_name} 💕 {partner_2.display_name}"
+            old_name = f"{partner_1.display_name} ❤️ {partner_2.display_name}"
 
         love_room_voice = self.cog.guild.get_channel(love_room_data.get("id"))
 
@@ -1213,10 +1089,8 @@ class ChangeLoveRoomNameModal(discord.ui.Modal):
         await love_room_voice.edit(name=new_name)
         await maybe_await(self.cog.db.write_data_loveRoom(self.root_interaction.user, "name", str(new_name)))
         
-        # Списание денег и обновление даты списания
         await maybe_await(self.cog.db.deduct_balance_and_update_date(self.root_interaction.user.id, cost))
         
-        # Обновляем профиль после изменения
         await self.cog.refresh_profile_message(self.root_interaction)
 
         if confirm_message:
@@ -1230,9 +1104,6 @@ class ChangeLoveRoomNameModal(discord.ui.Modal):
             )
 
 
-# ============================================================
-# SETUP
-# ============================================================
 async def setup(bot: commands.Bot):
     """Функция для загрузки кога"""
     await bot.add_cog(LoveProfile(bot))
