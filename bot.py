@@ -5,8 +5,6 @@ import sys
 import traceback
 import logging
 import types
-import threading
-import time
 
 try:
     from dotenv import load_dotenv
@@ -190,47 +188,6 @@ async def on_app_command_error(interaction: discord.Interaction, error: app_comm
             await interaction.response.send_message(msg, ephemeral=True)
     except Exception:
         pass
-
-
-# =============================================
-# ===== ЗАПУСК API ДЛЯ САЙТА =====
-# =============================================
-print("🔍 ДОШЁЛ ДО БЛОКА ЗАПУСКА API")
-sys.stdout.flush()
-
-try:
-    from economy_api import app
-    print("✅ Модуль economy_api найден")
-    sys.stdout.flush()
-    
-    def run_api():
-        try:
-            print("🚀 Запуск API на порту 10000...")
-            sys.stdout.flush()
-            app.run(host='0.0.0.0', port=10000, debug=False, use_reloader=False)
-        except Exception as e:
-            print(f"❌ Ошибка запуска API: {e}")
-            import traceback
-            traceback.print_exc()
-            sys.stdout.flush()
-
-    # Запускаем API в отдельном потоке
-    api_thread = threading.Thread(target=run_api, daemon=True)
-    api_thread.start()
-    time.sleep(2)
-    print("✅ API запущен на порту 10000")
-    sys.stdout.flush()
-    
-except ImportError as e:
-    print(f"⚠️ Модуль economy_api не найден: {e}")
-    print(f"   Текущая директория: {os.getcwd()}")
-    print(f"   Файлы в директории: {os.listdir('.')}")
-    sys.stdout.flush()
-except Exception as e:
-    print(f"❌ Ошибка при запуске API: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.stdout.flush()
 
 
 if __name__ == "__main__":
