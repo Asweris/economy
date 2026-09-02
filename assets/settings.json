@@ -1,5 +1,5 @@
 {
-    "guild_id": 1439176098632957955,
+    "guild_id": 1538958186839806123,
 
     "path_main_db": "main.db",
     "path_log_db": "log.db",
@@ -8,12 +8,12 @@
         "gender_male": 123,
         "gender_female": 123,
 
-        "marry_role": 1505171903596335235,
+        "marry_role": 1544738709168070707,
 
-        "personal_roles_sort": 1503488547821322340,
+        "personal_roles_sort": 1544738747101356032,
         "personal_rooms_sort": 1520464400744452289,
         
-        "personal_role_category": 1503488547821322340
+        "personal_role_category": 1544738747101356032
     },
 
     "prices": {
@@ -33,9 +33,9 @@
     },
 
     "channels": {
-        "entry_love_room": 1503488713580220467,
-        "love_category": 1503488713580220467,
-        "personal_rooms_category": 1503488742860656790
+        "entry_love_room": 1538958190484520961,
+        "love_category": 1538958190484520961,
+        "personal_rooms_category": 1544739691125936309
     },
 
     "logs": {
